@@ -26,80 +26,97 @@
 struct rate_src {
 	int type;
 	unsigned int channels;
-    asrc_pair *pair;
+	asrc_pair *pair;
 };
 
 static snd_pcm_uframes_t input_frames(void *obj, snd_pcm_uframes_t frames)
 {
-   uint32_t num, den;
-   struct rate_src *rate = obj;
-   if (frames == 0)
-      return 0;
-   asrc_pair_get_ratio(rate->pair, &num, &den);
-   return (snd_pcm_uframes_t)((frames * num + (den >> 1)) / den);
+	uint32_t num, den;
+	struct rate_src *rate = obj;
+
+	if (frames == 0)
+		return 0;
+
+	asrc_pair_get_ratio(rate->pair, &num, &den);
+
+	return (snd_pcm_uframes_t)((frames * num + (den >> 1)) / den);
 }
 
 static snd_pcm_uframes_t output_frames(void *obj, snd_pcm_uframes_t frames)
 {
-   uint32_t num, den;
-   struct rate_src *rate = obj;
-   if (frames == 0)
-      return 0;
-   asrc_pair_get_ratio(rate->pair, &num, &den);
-   return (snd_pcm_uframes_t)((frames * den + (num >> 1)) / num);
+	uint32_t num, den;
+	struct rate_src *rate = obj;
+
+	if (frames == 0)
+		return 0;
+
+	asrc_pair_get_ratio(rate->pair, &num, &den);
+
+	return (snd_pcm_uframes_t)((frames * den + (num >> 1)) / num);
 }
 
 static void pcm_src_free(void *obj)
 {
-   struct rate_src *rate = obj;
-   if (rate->pair)
-   {
-      asrc_pair_destroy(rate->pair);
-      rate->pair = NULL;
-   }
+	struct rate_src *rate = obj;
+
+	if (rate->pair)
+	{
+		asrc_pair_destroy(rate->pair);
+		rate->pair = NULL;
+	}
 }
 
 static int pcm_src_init(void *obj, snd_pcm_rate_info_t *info)
 {
-   struct rate_src *rate = obj;
+	struct rate_src *rate = obj;
    
-   if (!rate->pair || rate->channels != info->channels)
-   {
-      if (rate->pair)
-         asrc_pair_destroy(rate->pair);
-      rate->channels = info->channels;
-      rate->pair = asrc_pair_create(rate->channels, info->in.period_size * rate->channels,
-              info->out.period_size * rate->channels, info->in.rate, info->out.rate, rate->type);
-      if (!rate->pair)
-         return -EINVAL;
-   }
+	if (!rate->pair || rate->channels != info->channels)
+	{
+		if (rate->pair)
+			asrc_pair_destroy(rate->pair);
 
-   return 0;
+		rate->channels = info->channels;
+		rate->pair = asrc_pair_create(rate->channels,
+					      info->in.period_size * rate->channels,
+					      info->out.period_size * rate->channels,
+					      info->in.rate,
+					      info->out.rate,
+					      rate->type);
+		if (!rate->pair)
+			return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int pcm_src_adjust_pitch(void *obj, snd_pcm_rate_info_t *info)
 {
-   struct rate_src *rate = obj;
-   return asrc_pair_set_rate(rate->pair, info->in.period_size * rate->channels,
-           info->out.period_size * rate->channels, info->in.rate, info->out.rate);
+	struct rate_src *rate = obj;
+	return asrc_pair_set_rate(rate->pair,
+				  info->in.period_size * rate->channels,
+				  info->out.period_size * rate->channels,
+				  info->in.rate,
+				  info->out.rate);
 }
 
 static void pcm_src_reset(void *obj)
 {
-   struct rate_src *rate = obj;
-   asrc_pair_reset(rate->pair);
+	struct rate_src *rate = obj;
+	asrc_pair_reset(rate->pair);
 }
 
 static void pcm_src_convert_s16(void *obj, int16_t *dst, unsigned int dst_frames,
 				const int16_t *src, unsigned int src_frames)
 {
-   struct rate_src *rate = obj;
-   asrc_pair_convert_s16(rate->pair, src, src_frames * rate->channels, dst, dst_frames * rate->channels);
+	struct rate_src *rate = obj;
+	asrc_pair_convert_s16(rate->pair,
+			      src, src_frames * rate->channels,
+			      dst, dst_frames * rate->channels);
 }
 
 static void pcm_src_close(void *obj)
 {
-   free(obj);
+	free(obj);
 }
 
 #if SND_PCM_RATE_PLUGIN_VERSION >= 0x010002
@@ -107,7 +124,7 @@ static int get_supported_rates(void *obj, unsigned int *rate_min,
 			       unsigned int *rate_max)
 {
 	*rate_min = 8000;
-    *rate_max = 192000;
+	*rate_max = 192000;
 	return 0;
 }
 
@@ -160,7 +177,7 @@ static int pcm_src_open(unsigned int version, void **objp,
 }
 
 int SND_PCM_RATE_PLUGIN_ENTRY(asrcrate) (unsigned int version, void **objp,
-					   snd_pcm_rate_ops_t *ops)
+					 snd_pcm_rate_ops_t *ops)
 {
 	return pcm_src_open(version, objp, ops, 0);
 }

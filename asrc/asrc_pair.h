@@ -25,44 +25,52 @@
 #define ASRC_PAIR_H
 
 #include <stdint.h>
-#include <imx/linux/mxc_asrc.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct {
-    int fd;
-    int type;
-    enum asrc_pair_index index;
-    unsigned int channels;
-    ssize_t in_period_frames;
-    ssize_t out_period_frames;
-    unsigned int in_rate;
-    unsigned int out_rate;
-    uint32_t buf_size;
-    int buf_num;
-    uint32_t num;
-    uint32_t den;
+	int fd;
+	int type;
+	unsigned int channels;
+	ssize_t in_period_frames;
+	ssize_t out_period_frames;
+	unsigned int in_rate;
+	unsigned int out_rate;
+	uint32_t buf_size;
+	int buf_num;
+	uint32_t num;
+	uint32_t den;
 
-    int is_converting;
+	int is_converting;
+	void *asrc_task;
 } asrc_pair;
 
-asrc_pair *asrc_pair_create(unsigned int channels, ssize_t in_period_frames,
-        ssize_t out_period_frames, unsigned int in_rate, unsigned int out_rate, int type);
+asrc_pair *asrc_pair_create(unsigned int channels,
+			    ssize_t in_period_frames,
+			    ssize_t out_period_frames,
+			    unsigned int in_rate,
+			    unsigned int out_rate,
+			    int type);
 
 void asrc_pair_destroy(asrc_pair *pair);
 
 void asrc_pair_get_ratio(asrc_pair *pair, uint32_t *num, uint32_t *den);
 
-int asrc_pair_set_rate(asrc_pair *pair, ssize_t in_period_frames,
-        ssize_t out_period_frames, unsigned int in_rate, unsigned int out_rate);
+int asrc_pair_set_rate(asrc_pair *pair,
+		       ssize_t in_period_frames,
+		       ssize_t out_period_frames,
+		       unsigned int in_rate,
+		       unsigned int out_rate);
 
 void asrc_pair_reset(asrc_pair *pair);
 
-void asrc_pair_convert_s16(asrc_pair *pair, const int16_t *src, unsigned int src_frames,
-        int16_t *dst, unsigned int dst_frames);
-
+void asrc_pair_convert_s16(asrc_pair *pair,
+			   const int16_t *src,
+			   unsigned int src_frames,
+			   int16_t *dst,
+			   unsigned int dst_frames);
 #ifdef __cplusplus
 }
 #endif
