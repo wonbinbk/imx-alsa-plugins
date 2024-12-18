@@ -55,15 +55,6 @@ AC_DEFINE_UNQUOTED(ALSA_DATA_DIR, "$alsadatadir", [directory containing ALSA dat
 ALSA_DATA_DIR="$alsadatadir"
 AC_SUBST(ALSA_DATA_DIR)
 
-AC_CHECK_HEADERS([linux/mxc_asrc.h], [HAVE_ASRC_HEAD=yes], [HAVE_ASRC_HEAD=no])
-if test "x$HAVE_ASRC_HEAD" = "xno"; then
-    asrchead=`find /usr/src/ -name mxc_asrc.h | grep "/linux/mxc_asrc.h" | head -n 1 | sed -e 's,/linux/mxc_asrc.h,,'`
-    if test "x$asrchead" != "x"; then
-        ASRC_CFLAGS=-I$asrchead
-    fi
-fi
-AC_SUBST(ASRC_CFLAGS)
-
 SAVE_PLUGINS_VERSION
 
 AC_DEFUN([CHECK_CODEC_ENABLE],
