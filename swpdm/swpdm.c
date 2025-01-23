@@ -48,6 +48,7 @@ typedef struct snd_pcm_cic_filter {
 	int iterations;
 	unsigned int delay;
 	unsigned int OSR;
+	bool bit_reverse;
 }snd_pcm_cic_filter_t;
 
 static int cic_start(snd_pcm_ioplug_t *io);
@@ -134,6 +135,29 @@ static snd_pcm_sframes_t cic_pointer(snd_pcm_ioplug_t *io) {
 	return avail;
 }
 
+unsigned int reverse(unsigned int x) {
+	x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
+	x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
+	x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
+	x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8));
+	return((x >> 16) | (x << 16));
+}
+
+int reverse_buffer(unsigned int *p, int size)
+{
+	int i;
+	unsigned int *dst = p;
+
+	for (i = 0; i < size; i++) {
+		*dst++ = reverse(*p++);
+		*dst++ = reverse(*p++);
+		*dst++ = reverse(*p++);
+		*dst++ = reverse(*p++);
+	}
+
+	return 0;
+}
+
 static snd_pcm_sframes_t cic_transfer(snd_pcm_ioplug_t *io, const snd_pcm_channel_area_t *areas, 
 				      snd_pcm_uframes_t offset, snd_pcm_uframes_t size) {
 	snd_pcm_cic_filter_t *cic = io->private_data;
@@ -153,6 +177,10 @@ static snd_pcm_sframes_t cic_transfer(snd_pcm_ioplug_t *io, const snd_pcm_channe
 	slave_frames = snd_pcm_mmap_readi(cic->slave, cic->afe->inputBuffer, cic->in_period_size);
 	if(slave_frames < 0)
 		return slave_frames;
+
+	if (cic->bit_reverse)
+		reverse_buffer((unsigned int *)cic->afe->inputBuffer, cic->in_period_size);
+
 	/*pdm2pcm*/
 	processAfeCic(cic->afe);
 	/*Save to the app buffer.*/
@@ -290,6 +318,20 @@ static int cic_hw(snd_pcm_ioplug_t *io, snd_pcm_hw_params_t *params) {
 	if (refine_rate * snd_pcm_format_width(format) > 4800000) {
 		SNDERR("max frequency can't exceed 4.8MHz\n");
 		return -EINVAL;
+	}
+	cic->bit_reverse = false;
+	err = snd_pcm_hw_params_test_format(cic->slave, cic->slave_params, SND_PCM_FORMAT_DSD_U32_LE);
+	if (err < 0) {
+		err = snd_pcm_hw_params_test_format(cic->slave, cic->slave_params, SND_PCM_FORMAT_DSD_U32_BE);
+		if (err < 0) {
+			SNDERR("Unsupported format DSD_U32_LE or DSD_U32_BE\n");
+			return -EINVAL;
+		} else {
+			format = SND_PCM_FORMAT_DSD_U32_BE;
+			cic->bit_reverse = true;
+		}
+	} else {
+		format = SND_PCM_FORMAT_DSD_U32_LE;
 	}
 
 	/* set the sample format */
