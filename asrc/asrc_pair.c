@@ -323,9 +323,11 @@ void asrc_pair_convert_s16(asrc_pair *pair, const int16_t *src, unsigned int src
                     buf_info.output_buffer_vaddr, buf_info.output_buffer_length);
 
         s += in_len;
-        src_left -= in_len;
+        src_left = (src_left > in_len) ? src_left - in_len : 0;
         d += buf_info.output_buffer_length;
-        dst_left -= buf_info.output_buffer_length;
+        dst_left = (dst_left > buf_info.output_buffer_length)
+                       ? dst_left - buf_info.output_buffer_length
+                       : 0;
         //printf("[%d/%d]\n", buf_info.output_buffer_length, out_len);
     }
 
